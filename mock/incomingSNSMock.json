@@ -1,0 +1,22 @@
+{
+  "Records": [
+    {
+      "EventSource": "aws:sns",
+      "EventVersion": "1.0",
+      "EventSubscriptionArn": "arn:aws:sns:eu-west-1:489024636830:email-notifications:91018fd5-5f62-434f-9162-fd4635c5fef4",
+      "Sns": {
+        "Type": "Notification",
+        "MessageId": "8bd15777-93da-5f6e-8577-01335b0028ee",
+        "TopicArn": "arn:aws:sns:eu-west-1:.....my-email-topic",
+        "Subject": "Delete PDP Context Notification",
+        "Message": "{ \"description\": \"Delete PDP Context\",\"endpoint_name\": \"endpoint test 4\", \"endpoint_id\": \"9786194\"}",
+        "Timestamp": "2019-11-12T14:50:02.083Z",
+        "SignatureVersion": "1",
+        "Signature": "aPysjKeP+Gd8KoHOaqd3a8Cg0z0LCmHZ1D944yr9dlIsy0R2mqgyqr4NtwojFu1JCnaf5vyBrSygq8Wm4EXi32vuquM7S7NzFnCBbtt4VBROsVTbHC3udtZi3kpKb/45isfNVRfB89HtLfuYUGcKShHdA35LeZvEM2+Ph/eJkXJClPNBL80ATj/Fqahr065ID/pprFlPWCVP9x9whalkerzt4keiMATTO7DA1Sr0l30A/9vm9Hv1hFbP8cnHHCCYNVs2bcTfxAQpoPcsAeNnmOaWgk7f8pEC0EcCvx4Kr8HwtCzndG0SawBWTCuHlsCpNejckLKAQm+J0IHWe5AS4w==",
+        "SigningCertUrl": "https://sns.eu-west-1.amazonaws.com/SimpleNotificationService-6aad65c2.fda11f913f9.pem",
+        "UnsubscribeUrl": "https://sns.eu-west-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:eu-west-1:.....my-email-topic:wd-e-434f-e-e",
+        "MessageAttributes": {}
+      }
+    }
+  ]
+}
