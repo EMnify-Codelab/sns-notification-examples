@@ -1,0 +1,288 @@
+AWSTemplateFormatVersion: 2010-09-09
+Metadata:
+  'AWS::CloudFormation::Designer':
+    ea76474f-9aaf-4d6e-8515-f28cc01d62c5:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 360
+        'y': 30
+      z: 1
+      embeds: []
+    e4d72602-b215-4202-adbe-bc0692e4fdab:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 240
+        'y': 180
+      z: 1
+      embeds: []
+    8b6501d4-3f15-4010-b499-4ce5182e3725:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 150
+        'y': 180
+      z: 1
+      embeds: []
+      isassociatedwith:
+        - e4d72602-b215-4202-adbe-bc0692e4fdab
+    b7099898-a486-4047-aea1-bb79ee82e1aa:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 60
+        'y': 180
+      z: 1
+      embeds: []
+    e89a7bc3-d3e8-47d9-b569-aca0b5c0382b:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 480
+        'y': 180
+      z: 1
+      embeds: []
+    180a6e8a-2b60-444f-8bb5-c81c19124a6d:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 570
+        'y': 90
+      z: 1
+      embeds: []
+Parameters:
+  BucketName:
+    Description: S3 Bucket name
+    Type: String
+  SlackChannel:
+    Description: The name of the Slack channel to receive notifications
+    Type: String
+  SlackBotName:
+    Description: The name of the user that will deliver notifications
+    Type: String
+  SlackWebhookURL:
+    Description: >-
+      A Webhook URL for the Slack notifications. WARNING - remove 'https://hooks.slack.com/services/' from the beginning of the webhook URL!
+    Type: String
+Resources:
+  LambdaInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref SlackSNSTopic
+      FunctionName: !GetAtt
+        - SNStoSlack
+        - Arn
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DependsOn: BucketPermissions
+    Properties:
+      BucketName: !Ref BucketName
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt
+              - S3toSNSLambda
+              - Arn
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: b7099898-a486-4047-aea1-bb79ee82e1aa
+  BucketPermissions:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref S3toSNSLambda
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:s3:::${BucketName}'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 8b6501d4-3f15-4010-b499-4ce5182e3725
+  S3toSNSLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Description: >-
+        A routing Lambda that triggers Slack and Email Notifications based on
+        incoming messages
+      Handler: index.handler
+      Role: !GetAtt
+        - LambdaExecutionRole
+        - Arn
+      Timeout: 30
+      Runtime: python3.7
+      Code:
+        ZipFile: !Sub |
+          import csv
+          import json
+          import urllib.parse
+          import boto3
+
+          s3 = boto3.client('s3')
+          sns = boto3.client('sns')
+
+          def handler(event, context):
+            bucket = event['Records'][0]['s3']['bucket']['name']
+            key = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
+
+            try:
+              obj = s3.get_object(Bucket=bucket, Key=key)
+              csv_file = obj['Body'].read().decode("utf-8").split('\n')
+              csv_reader = csv.DictReader(csv_file)
+
+              for row in csv_reader:
+                sns_message ='{ "description": "%s","endpoint_name": "%s", "endpoint_id": "%s"}'  % (row['event_type_description'], row['endpoint_name'], row['endpoint_id'])
+                sns_subject = "%s Notification" %(row["event_type_description"])
+
+                # Slack Topic
+                if "suspension" in row['event_type_description']:
+                  sns_response = sns.publish(
+                    TopicArn='${SlackSNSTopic}',
+                    Message=sns_message,
+                    Subject=sns_subject
+                  )
+
+            except Exception as e:
+              print(e)
+              print('Error getting object {} from bucket {}. Make sure they exist and your bucket is in the same region as this function.'.format(key, bucket))
+              raise e
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: e4d72602-b215-4202-adbe-bc0692e4fdab
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: S3Policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                Resource: !Sub 'arn:aws:s3:::${BucketName}/*'
+        - PolicyName: SNSWritePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: 'sns:Publish'
+                Resource: !Ref SlackSNSTopic
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: ea76474f-9aaf-4d6e-8515-f28cc01d62c5
+  BasicLambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+  SlackSNSTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      Subscription:
+        - Endpoint: !GetAtt
+            - SNStoSlack
+            - Arn
+          Protocol: lambda
+  SNStoSlack:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Description: Node Lambda which delivers Slack Notifications
+      Handler: index.handler
+      Role: !GetAtt
+        - BasicLambdaExecutionRole
+        - Arn
+      Timeout: 30
+      Runtime: nodejs12.x
+      Code:
+        ZipFile: !Sub |
+          var https = require('https');
+          var util = require('util');
+
+          exports.handler = function(event, context) {
+            console.log(JSON.stringify(event, null, 2));
+            console.log('From SNS:', event.Records[0].Sns.Message);
+
+            var postData = {
+              "channel": "#${SlackChannel}",
+              "username": "${SlackBotName}",
+              "text": "*" + event.Records[0].Sns.Subject + "*",
+              "icon_emoji": ":satellite:"
+            };
+
+            var message = JSON.parse(event.Records[0].Sns.Message);
+
+            postData.attachments = [{
+              "blocks": [{
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "New event detected on the EMnify platform:\n\n" + message.description +"*\n"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "To view the status of *" + message.endpoint_name + "* in the browser, see: <https://cdn.emnify.net/#/endpoints/" + message.endpoint_id + "|Endpoints / " + message.endpoint_id + ">"
+                  }
+                }
+              ]
+            }];
+
+            var options = {
+              method: 'POST',
+              hostname: 'hooks.slack.com',
+              port: 443,
+              path: '/services/${SlackWebhookURL}'
+            };
+
+            var req = https.request(options, function(res) {
+              res.setEncoding('utf8');
+              res.on('data', function(chunk) {
+                context.done(null);
+              });
+            });
+
+            req.on('error', function(e) {
+              console.log('problem with request: ' + e.message);
+            });
+
+            req.write(util.format("%j", postData));
+            req.end();
+          };
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: e89a7bc3-d3e8-47d9-b569-aca0b5c0382b
