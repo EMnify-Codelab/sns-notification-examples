@@ -246,7 +246,7 @@ Resources:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "New event detected on the EMnify platform:\n\n" + message.description +"*\n"
+                    "text": "New event detected on the EMnify platform:\n\n*" + message.description +"*\n"
                   }
                 },
                 {
@@ -261,12 +261,14 @@ Resources:
                 }
               ]
             }];
-
+            
+            var webhookPath =  str.replace("https://hooks.slack.com/services/", "${SlackWebhookURL}");
+            
             var options = {
               method: 'POST',
               hostname: 'hooks.slack.com',
               port: 443,
-              path: '/services/${SlackWebhookURL}'
+              path: webhookPath
             };
 
             var req = https.request(options, function(res) {
