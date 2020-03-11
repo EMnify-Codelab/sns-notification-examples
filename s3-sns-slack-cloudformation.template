@@ -58,19 +58,24 @@ Metadata:
       z: 1
       embeds: []
 Parameters:
-  BucketName:
-    Description: S3 Bucket name
+  DatastreamBucketName:
+    Description: >-
+      The name of an S3 Bucket used as a destination for EMnify Datastreamer
+      events.
     Type: String
   SlackChannel:
     Description: The name of the Slack channel to receive notifications
     Type: String
   SlackBotName:
-    Description: The name of the user that will deliver notifications
+    Description: The name of the bot that will deliver notifications
     Type: String
   SlackWebhookURL:
-    Description: >-
-      A Webhook URL for the Slack notifications. WARNING - remove 'https://hooks.slack.com/services/' from the beginning of the webhook URL!
+    Description: The full Webhook URL for the Slack notifications.
     Type: String
+  SlackMatchPattern:
+    Type: String
+    Default: suspension
+    Description: A regular expression match pattern for triggering slack notifications
 Resources:
   LambdaInvokePermission:
     Type: 'AWS::Lambda::Permission'
@@ -85,7 +90,7 @@ Resources:
     Type: 'AWS::S3::Bucket'
     DependsOn: BucketPermissions
     Properties:
-      BucketName: !Ref BucketName
+      BucketName: !Ref DatastreamBucketName
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
@@ -102,7 +107,7 @@ Resources:
       FunctionName: !Ref S3toSNSLambda
       Principal: s3.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:s3:::${BucketName}'
+      SourceArn: !Sub 'arn:aws:s3:::${DatastreamBucketName}'
     Metadata:
       'AWS::CloudFormation::Designer':
         id: 8b6501d4-3f15-4010-b499-4ce5182e3725
@@ -118,12 +123,17 @@ Resources:
         - Arn
       Timeout: 30
       Runtime: python3.7
+      Environment:
+        Variables:
+          EVENT_MATCH_PATTERN: !Ref SlackMatchPattern
       Code:
         ZipFile: !Sub |
           import csv
           import json
           import urllib.parse
           import boto3
+          import re
+          import os
 
           s3 = boto3.client('s3')
           sns = boto3.client('sns')
@@ -139,10 +149,13 @@ Resources:
 
               for row in csv_reader:
                 sns_message ='{ "description": "%s","endpoint_name": "%s", "endpoint_id": "%s"}'  % (row['event_type_description'], row['endpoint_name'], row['endpoint_id'])
-                sns_subject = "%s Notification" %(row["event_type_description"])
+                sns_subject = "%s notification" %(row["event_type_description"])
+
+                slack_match_pattern = os.environ['EVENT_MATCH_PATTERN']
+                incoming_event_description = row['event_type_description']
 
                 # Slack Topic
-                if "suspension" in row['event_type_description']:
+                if re.search(slack_match_pattern, incoming_event_description):
                   sns_response = sns.publish(
                     TopicArn='${SlackSNSTopic}',
                     Message=sns_message,
@@ -151,7 +164,6 @@ Resources:
 
             except Exception as e:
               print(e)
-              print('Error getting object {} from bucket {}. Make sure they exist and your bucket is in the same region as this function.'.format(key, bucket))
               raise e
     Metadata:
       'AWS::CloudFormation::Designer':
@@ -179,7 +191,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - 's3:GetObject'
-                Resource: !Sub 'arn:aws:s3:::${BucketName}/*'
+                Resource: !Sub 'arn:aws:s3:::${DatastreamBucketName}/*'
         - PolicyName: SNSWritePolicy
           PolicyDocument:
             Version: 2012-10-17
@@ -223,6 +235,9 @@ Resources:
         - Arn
       Timeout: 30
       Runtime: nodejs12.x
+      Environment:
+        Variables:
+          WEBHOOK_URL: !Ref SlackWebhookURL
       Code:
         ZipFile: !Sub |
           var https = require('https');
@@ -261,9 +276,9 @@ Resources:
                 }
               ]
             }];
-            
-            var webhookPath =  str.replace("https://hooks.slack.com/services/", "${SlackWebhookURL}");
-            
+
+            var webhookPath = process.env.WEBHOOK_URL.replace('https://hooks.slack.com', '');
+
             var options = {
               method: 'POST',
               hostname: 'hooks.slack.com',
