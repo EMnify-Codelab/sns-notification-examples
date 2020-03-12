@@ -10,7 +10,7 @@ An article which has step-by-step instructions for these code examples can be fo
 
 ## Cloudformation Template
 
-A cloudformation template is provided to bootstrap the AWS components used in this repository.
+A cloudformation template is provided to bootstrap the AWS components used in this repository and get started with the Slack integration.
 To get started, copy the [template](https://github.com/EMnify-Codelab/sns-notification-examples/blob/master/s3-sns-slack-cloudformation.template) into the cloudformation service, or launch the stack directly here:
 
 [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=emnify-datastreamer-notifications&templateURL=https://cd-templates-example.s3.eu-west-3.amazonaws.com/s3-sns-slack.template)
@@ -22,6 +22,9 @@ The parameters that have to be set suring launch are as follows:
 * `SlackChannel` - The name of the Slack channel to receive notifications
 * `SlackMatchPattern` - A regular expression match pattern for triggering slack notifications. This is passed to the Lambda function as an environment variable and can easily be edited later.
 * `SlackWebhookURL` - The full Webhook URL for the Slack notifications. This is passed to the Lambda function as an environment variable and can easily be edited later.
+
+__Note:__ This stack does not include the email notification lambda or SNS topic. 
+To add this to the stack, add an email SNS topic and copy the SES lambda in this repository to this stack.
 
 ## Repository contents
 
