@@ -34,7 +34,7 @@ To add this to the stack, add an email SNS topic and copy the SES lambda in this
 ├── SNStoSlack
 │   └── SNStoSlack.js                <- A Node.js lambda which sends Slack notifications to a configurable workspace
 ├── SNStoSES
-│   ├── SNStoSES.py                  <- Send SES emails using a basic HTML template, lexx flexible, but quick to start
+│   ├── SNStoSES.py                  <- Send SES emails using a HTML template, less flexible but convenient starting-place
 │   └── template.html                <- An example HTML template for use with SES
 └── SESwithTemplate
     ├── email_template.json          <- A more complex HTML template for use with SES
