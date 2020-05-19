@@ -13,7 +13,7 @@ An article which has step-by-step instructions for these code examples can be fo
 A cloudformation template is provided to bootstrap the AWS components used in this repository and get started with the Slack integration.
 To get started, copy the [template](https://github.com/EMnify-Codelab/sns-notification-examples/blob/master/s3-sns-slack-cloudformation.template) into the cloudformation service, or launch the stack directly here:
 
-[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=emnify-datastreamer-notifications&templateURL=https://cd-templates-example.s3.eu-west-3.amazonaws.com/s3-sns-slack.template)
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=emnify-datastreamer-notifications&templateURL=https://emnify-public-docs.s3.eu-central-1.amazonaws.com/cf-templates/s3-sns-slack.template)
 
 The parameters that have to be set suring launch are as follows:
 
